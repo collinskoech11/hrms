@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import frappe
 from frappe import _
@@ -23,6 +23,29 @@ class MultipleShiftError(frappe.ValidationError):
 
 
 class ShiftAssignment(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		amended_from: DF.Link | None
+		company: DF.Link
+		department: DF.Link | None
+		employee: DF.Link
+		employee_name: DF.Data | None
+		end_date: DF.Date | None
+		overtime_type: DF.Link | None
+		shift_location: DF.Link | None
+		shift_request: DF.Link | None
+		shift_schedule_assignment: DF.Link | None
+		shift_type: DF.Link
+		start_date: DF.Date
+		status: DF.Literal["Active", "Inactive"]
+	# end: auto-generated types
+
 	def validate(self):
 		validate_active_employee(self.employee)
 		if self.end_date:
@@ -163,7 +186,7 @@ def has_overlapping_timings(shift_1: str, shift_2: str) -> bool:
 
 
 @frappe.whitelist()
-def get_events(start, end, filters=None):
+def get_events(start: str | date, end: str | date, filters: list | None = None):
 	employee = frappe.db.get_value(
 		"Employee", {"user_id": frappe.session.user}, ["name", "company"], as_dict=True
 	)
@@ -456,8 +479,8 @@ def get_prev_or_next_shift(
 	if consider_default_shift and default_shift:
 		direction = -1 if next_shift_direction == "reverse" else 1
 		for i in range(MAX_DAYS):
-			date = for_timestamp + timedelta(days=direction * (i + 1))
-			shift_details = get_employee_shift(employee, date, consider_default_shift, None)
+			date_time = for_timestamp + timedelta(days=direction * (i + 1))
+			shift_details = get_employee_shift(employee, date_time, consider_default_shift, None)
 			if shift_details:
 				return shift_details
 	else:
@@ -601,6 +624,8 @@ def get_shift_details(shift_type_name: str, for_timestamp: datetime | None = Non
 
 	actual_start = start_datetime - timedelta(minutes=shift_type.begin_check_in_before_shift_start_time)
 	actual_end = end_datetime + timedelta(minutes=shift_type.allow_check_out_after_shift_end_time)
+	allow_overtime = shift_type.allow_overtime
+	overtime_type = shift_type.overtime_type
 
 	return frappe._dict(
 		{
@@ -609,6 +634,8 @@ def get_shift_details(shift_type_name: str, for_timestamp: datetime | None = Non
 			"end_datetime": end_datetime,
 			"actual_start": actual_start,
 			"actual_end": actual_end,
+			"allow_overtime": allow_overtime,
+			"overtime_type": overtime_type,
 		}
 	)
 
@@ -623,6 +650,8 @@ def get_shift_type(shift_type_name: str) -> dict:
 			"end_time",
 			"begin_check_in_before_shift_start_time",
 			"allow_check_out_after_shift_end_time",
+			"allow_overtime",
+			"overtime_type",
 		],
 		as_dict=1,
 	)
